@@ -239,25 +239,79 @@
       cursor: default;
     }
 
-    /* ── BINGO TOAST ── */
-    .bingo-toast {
+    /* ── NEW ROUND OVERLAY ── */
+    .new-round-overlay {
+      display: none;
       position: fixed;
-      top: 20px;
-      right: 20px;
-      background: var(--pink);
-      color: #fff;
-      font-size: 0.88rem;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      padding: 11px 20px;
-      border-radius: 9px;
-      z-index: 100;
-      transform: translateY(-120px);
-      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-      pointer-events: none;
+      inset: 0;
+      background: #000000cc;
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
     }
 
-    .bingo-toast.show { transform: translateY(0); }
+    .new-round-overlay.show { display: flex; }
+
+    .new-round-winner {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted2);
+      margin-bottom: 8px;
+    }
+
+    .new-round-name {
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      color: var(--pink);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .new-round-label {
+      font-size: clamp(1rem, 3vw, 1.4rem);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #fff;
+      margin-bottom: 40px;
+    }
+
+    .new-round-btn {
+      padding: 16px 40px;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 700;
+      background: var(--pink);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      letter-spacing: 0.01em;
+    }
+
+    .new-round-btn:hover { opacity: 0.85; transform: translateY(-2px); }
+    .new-round-btn:active { transform: translateY(0); }
+
+    .new-round-skip {
+      margin-top: 12px;
+      font-size: 0.78rem;
+      color: var(--muted2);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .new-round-skip:hover { color: #888; }
 
     ::-webkit-scrollbar { width: 3px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -303,7 +357,13 @@
     </div>
   </div>
 
-  <div class="bingo-toast" id="bingo-toast"></div>
+  <div class="new-round-overlay" id="new-round-overlay">
+    <div class="new-round-winner">We have a winner</div>
+    <div class="new-round-name" id="new-round-name"></div>
+    <div class="new-round-label">BINGO</div>
+    <button class="new-round-btn" onclick="startNewRound()">Start new round</button>
+    <button class="new-round-skip" onclick="dismissOverlay()">Keep playing</button>
+  </div>
 
   <script>
     const socket = io();
@@ -327,7 +387,6 @@
     }
 
     function resetGame() {
-      if (!confirm('Reset game for everyone?')) return;
       socket.emit('resetGame');
     }
 
@@ -367,11 +426,18 @@
     });
 
     socket.on('bingoAlert', (name) => {
-      const t = document.getElementById('bingo-toast');
-      t.textContent = `BINGO — ${name}`;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 4000);
+      document.getElementById('new-round-name').textContent = name;
+      document.getElementById('new-round-overlay').classList.add('show');
     });
+
+    function startNewRound() {
+      socket.emit('resetGame');
+      dismissOverlay();
+    }
+
+    function dismissOverlay() {
+      document.getElementById('new-round-overlay').classList.remove('show');
+    }
 
     socket.on('gameReset', () => {
       calledWords.clear();
