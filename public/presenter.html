@@ -313,6 +313,15 @@
 
     .new-round-skip:hover { color: #888; }
 
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 199;
+    }
+
     ::-webkit-scrollbar { width: 3px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -357,6 +366,7 @@
     </div>
   </div>
 
+  <canvas id="confetti-canvas"></canvas>
   <div class="new-round-overlay" id="new-round-overlay">
     <div class="new-round-winner">We have a winner</div>
     <div class="new-round-name" id="new-round-name"></div>
@@ -425,9 +435,54 @@
       }).join('');
     });
 
+    // ── CONFETTI ──
+    const confettiCanvas = document.getElementById('confetti-canvas');
+    const ctx = confettiCanvas.getContext('2d');
+    let particles = [], confettiRaf = null;
+    const COLORS = ['#6d0bff','#5bffe2','#d100a2','#ffffff','#6d0bff','#5bffe2'];
+
+    function launchConfetti() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+      particles = Array.from({ length: 180 }, () => ({
+        x: Math.random() * confettiCanvas.width,
+        y: -10 - Math.random() * 300,
+        w: 7 + Math.random() * 9,
+        h: 11 + Math.random() * 7,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        vx: (Math.random() - 0.5) * 4,
+        vy: 2.5 + Math.random() * 4,
+        angle: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * 0.22,
+        opacity: 1,
+      }));
+      if (confettiRaf) cancelAnimationFrame(confettiRaf);
+      tickConfetti();
+      setTimeout(() => { particles = []; }, 5000);
+    }
+
+    function tickConfetti() {
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.angle += p.spin; p.vy += 0.06;
+        p.opacity = Math.max(0, 1 - Math.max(0, p.y - confettiCanvas.height * 0.7) / (confettiCanvas.height * 0.3));
+        ctx.save();
+        ctx.globalAlpha = p.opacity;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      });
+      particles = particles.filter(p => p.y < confettiCanvas.height + 20);
+      if (particles.length) confettiRaf = requestAnimationFrame(tickConfetti);
+      else ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+
     socket.on('bingoAlert', (name) => {
       document.getElementById('new-round-name').textContent = name;
       document.getElementById('new-round-overlay').classList.add('show');
+      launchConfetti();
     });
 
     function startNewRound() {
